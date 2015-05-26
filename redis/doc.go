@@ -2,7 +2,7 @@
 //
 // To import inside your package do:
 //
-//	import "github.com/fzzy/radix/redis"
+//	import "github.com/ctrlaltdel121/radix/redis"
 //
 // Connecting
 //

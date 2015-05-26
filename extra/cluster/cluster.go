@@ -20,8 +20,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/fzzy/radix/extra/pool"
-	"github.com/fzzy/radix/redis"
+	"github.com/ctrlaltdel121/radix/extra/pool"
+	"github.com/ctrlaltdel121/radix/redis"
 )
 
 const numSlots = 16384

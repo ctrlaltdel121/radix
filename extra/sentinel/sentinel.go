@@ -54,11 +54,11 @@ package sentinel
 
 import (
 	"errors"
-	"github.com/fzzy/radix/redis"
+	"github.com/ctrlaltdel121/radix/redis"
 	"strings"
 
-	"github.com/fzzy/radix/extra/pool"
-	"github.com/fzzy/radix/extra/pubsub"
+	"github.com/ctrlaltdel121/radix/extra/pool"
+	"github.com/ctrlaltdel121/radix/extra/pubsub"
 )
 
 // An error wrapper returned by operations in this package. It implements the
