@@ -99,7 +99,11 @@ func bufioReadMessage(r *bufio.Reader) (*Message, error) {
 	case arrayPrefix[0]:
 		return readArray(r)
 	default:
-		return nil, badType
+		ret, err := r.ReadString('\n')
+		if err != nil {
+			return nil, badType
+		}
+		return nil, errors.New("wrong type: " + string(ret))
 	}
 }
 
