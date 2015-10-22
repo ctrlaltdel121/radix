@@ -116,8 +116,8 @@ type Client struct {
 // connections for each master. The client will automatically replace the pool
 // for any master should sentinel decide to fail the master over. The returned
 // error is a *ClientError.
-func NewClient(
-	network, address string, poolSize int, names ...string,
+func NewCustomClient(
+	network, address string, poolSize int, df pool.DialFunc, names ...string,
 ) (
 	*Client, error,
 ) {
@@ -137,7 +137,7 @@ func NewClient(
 			return nil, &ClientError{err: err, SentinelErr: true}
 		}
 		addr := l[3] + ":" + l[5]
-		pool, err := pool.NewPool("tcp", addr, poolSize)
+		pool, err := pool.NewCustomPool("tcp", addr, poolSize, df)
 		if err != nil {
 			return nil, &ClientError{err: err}
 		}
@@ -164,6 +164,10 @@ func NewClient(
 	go c.subSpin()
 	go c.spin()
 	return c, nil
+}
+
+func NewClient(network, address string, poolSize int, names ...string) (*Client, error) {
+	return NewCustomClient(network, address, poolSize, redis.Dial, names...)
 }
 
 func (c *Client) subSpin() {
