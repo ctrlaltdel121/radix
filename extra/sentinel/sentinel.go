@@ -54,12 +54,12 @@ package sentinel
 
 import (
 	"errors"
-	"github.com/ctrlaltdel121/radix/redis"
 	"strings"
 	"time"
 
 	"github.com/ctrlaltdel121/radix/extra/pool"
 	"github.com/ctrlaltdel121/radix/extra/pubsub"
+	"github.com/ctrlaltdel121/radix/redis"
 )
 
 // An error wrapper returned by operations in this package. It implements the
@@ -102,6 +102,7 @@ type Client struct {
 	poolSize    int
 	masterPools map[string]*pool.Pool
 	subClient   *pubsub.SubClient
+	dialFunc    pool.DialFunc
 
 	getCh   chan *getReq
 	putCh   chan *putReq
@@ -118,20 +119,14 @@ type Client struct {
 // for any master should sentinel decide to fail the master over. The returned
 // error is a *ClientError.
 func NewCustomClient(
-	network, address string, poolSize int, timeout *int, df pool.DialFunc, names ...string,
+	network, address string, poolSize, timeout int, df pool.DialFunc, names ...string,
 ) (
 	*Client, error,
 ) {
 
 	// We use this to fetch initial details about masters before we upgrade it
 	// to a pubsub client
-  var client *redis.Client
-  var err error
-  if timeout != nil {
-    client, err = redis.DialTimeout(network, address, time.Duration(*timeout)*time.Second)
-  } else {
-    client, err = redis.Dial(network, address)
-  }
+	client, err := redis.DialTimeout(network, address, time.Second*time.Duration(timeout))
 	if err != nil {
 		return nil, &ClientError{err: err}
 	}
@@ -166,6 +161,7 @@ func NewCustomClient(
 		closeCh:        make(chan struct{}),
 		alwaysErrCh:    make(chan *ClientError),
 		switchMasterCh: make(chan *switchMaster),
+		dialFunc:       df,
 	}
 
 	go c.subSpin()
@@ -174,7 +170,7 @@ func NewCustomClient(
 }
 
 func NewClient(network, address string, poolSize int, names ...string) (*Client, error) {
-	return NewCustomClient(network, address, poolSize, nil, redis.Dial, names...)
+	return NewCustomClient(network, address, poolSize, 0, redis.Dial, names...)
 }
 
 func (c *Client) subSpin() {
@@ -233,7 +229,7 @@ func (c *Client) spin() {
 		case sm := <-c.switchMasterCh:
 			if p, ok := c.masterPools[sm.name]; ok {
 				p.Empty()
-				p = pool.NewOrEmptyPool("tcp", sm.addr, c.poolSize)
+				p = pool.NewOrEmptyCustomPool("tcp", sm.addr, c.poolSize, c.dialFunc)
 				c.masterPools[sm.name] = p
 			}
 
