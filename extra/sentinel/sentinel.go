@@ -56,6 +56,7 @@ import (
 	"errors"
 	"github.com/ctrlaltdel121/radix/redis"
 	"strings"
+	"time"
 
 	"github.com/ctrlaltdel121/radix/extra/pool"
 	"github.com/ctrlaltdel121/radix/extra/pubsub"
@@ -117,14 +118,20 @@ type Client struct {
 // for any master should sentinel decide to fail the master over. The returned
 // error is a *ClientError.
 func NewCustomClient(
-	network, address string, poolSize int, df pool.DialFunc, names ...string,
+	network, address string, poolSize int, timeout *int, df pool.DialFunc, names ...string,
 ) (
 	*Client, error,
 ) {
 
 	// We use this to fetch initial details about masters before we upgrade it
 	// to a pubsub client
-	client, err := redis.Dial(network, address)
+  var client *redis.Client
+  var err error
+  if timeout != nil {
+    client, err = redis.DialTimeout(network, address, time.Duration(*timeout)*time.Second)
+  } else {
+    client, err = redis.Dial(network, address)
+  }
 	if err != nil {
 		return nil, &ClientError{err: err}
 	}
@@ -167,7 +174,7 @@ func NewCustomClient(
 }
 
 func NewClient(network, address string, poolSize int, names ...string) (*Client, error) {
-	return NewCustomClient(network, address, poolSize, redis.Dial, names...)
+	return NewCustomClient(network, address, poolSize, nil, redis.Dial, names...)
 }
 
 func (c *Client) subSpin() {
