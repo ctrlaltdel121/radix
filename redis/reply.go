@@ -202,6 +202,26 @@ func (r *Reply) List() ([]string, error) {
 	return strings, nil
 }
 
+func (r *Reply) IntList() ([]int, error) {
+	if r.Type == ErrorReply {
+		return nil, r.Err
+	}
+	if r.Type != MultiReply {
+		return nil, errors.New("reply type is not MultiReply")
+	}
+
+	ints := make([]int, len(r.Elems))
+	for i, v := range r.Elems {
+		if v.Type == IntegerReply {
+			ints[i] = int(v.int)
+		} else {
+			return nil, errors.New("element type is not IntegerReply")
+		}
+	}
+
+	return ints, nil
+}
+
 // ListBytes returns a multi bulk reply as a slice of bytes slices or an error.
 // The reply type must be MultiReply and its elements' types must all be either BulkReply or NilReply.
 // Nil elements are returned as nil.
