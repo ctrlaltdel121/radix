@@ -111,8 +111,6 @@ type Client struct {
 	alwaysErr      *ClientError
 	alwaysErrCh    chan *ClientError
 	switchMasterCh chan *switchMaster
-
-	publicMasterNotify chan *switchMaster
 }
 
 // Creates a sentinel client. Connects to the given sentinel instance, pulls the
@@ -155,16 +153,15 @@ func NewCustomClient(
 	}
 
 	c := &Client{
-		poolSize:           poolSize,
-		masterPools:        masterPools,
-		subClient:          subClient,
-		getCh:              make(chan *getReq),
-		putCh:              make(chan *putReq),
-		closeCh:            make(chan struct{}),
-		alwaysErrCh:        make(chan *ClientError),
-		switchMasterCh:     make(chan *switchMaster),
-		publicMasterNotify: make(chan *switchMaster),
-		dialFunc:           df,
+		poolSize:       poolSize,
+		masterPools:    masterPools,
+		subClient:      subClient,
+		getCh:          make(chan *getReq),
+		putCh:          make(chan *putReq),
+		closeCh:        make(chan struct{}),
+		alwaysErrCh:    make(chan *ClientError),
+		switchMasterCh: make(chan *switchMaster),
+		dialFunc:       df,
 	}
 
 	go c.subSpin()
@@ -174,10 +171,6 @@ func NewCustomClient(
 
 func NewClient(network, address string, poolSize int, names ...string) (*Client, error) {
 	return NewCustomClient(network, address, poolSize, 0, redis.Dial, names...)
-}
-
-func (c *Client) SwitchMasterNotify() chan *switchMaster {
-	return c.publicMasterNotify
 }
 
 func (c *Client) subSpin() {
@@ -238,11 +231,6 @@ func (c *Client) spin() {
 				p.Empty()
 				p = pool.NewOrEmptyCustomPool("tcp", sm.addr, c.poolSize, c.dialFunc)
 				c.masterPools[sm.name] = p
-			}
-			// non-blocking send to the public channel, if the library user is listening
-			select {
-			case c.publicMasterNotify <- sm:
-			default:
 			}
 
 		case <-c.closeCh:
